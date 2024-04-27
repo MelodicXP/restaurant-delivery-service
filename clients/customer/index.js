@@ -5,7 +5,7 @@ require('dotenv').config({ path: './.env'});
 
 // Imports for external dependencies
 const { io } = require('socket.io-client');
-// const { createFoodOrder } = require('./handler');
+const { sendFoodOrderToRestaurant } = require('./handler');
 
 // Constants
 const rdsNameSpaceUrl = process.env.NAMESPACE_URL;
@@ -15,3 +15,7 @@ const customerRoom = process.env.ROOM_NAME || 'default-customer-room';
 socket.emit('JOIN', customerRoom, () => {
   console.log(`Joined ${customerRoom} room`);
 }); 
+
+setInterval(() => {
+  sendFoodOrderToRestaurant(socket, customerRoom);
+}, 11000);
