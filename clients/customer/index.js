@@ -3,19 +3,26 @@
 // Load environment variables
 require('dotenv').config({ path: './.env'});
 
+// Import socket manager
+const socketManager = require('../socketManager');
+
 // Imports for external dependencies
-const { io } = require('socket.io-client');
-const { sendFoodOrderToRestaurant } = require('./handler');
+const orderCreator = require('./orderCreator');
+const orderHandler = require('./handler');
 
-// Constants
-const rdsNameSpaceUrl = process.env.NAMESPACE_URL;
-const socket = io(rdsNameSpaceUrl);
-const customerRoom = process.env.ROOM_NAME || 'default-customer-room';
+//**------Main execution Logic------**/
+const customer = orderCreator.createCustomer();
 
-socket.emit('JOIN', customerRoom, () => {
-  console.log(`Joined ${customerRoom} room`);
+// Join room using socket manager
+socketManager.joinRoom(customer.customerRoom, () => {
+  console.log(`Joined ${customer.customerRoom} room`);
 }); 
 
+// Schedule food orders to be sent regularly (every 11s)
 setInterval(() => {
-  sendFoodOrderToRestaurant(socket, customerRoom);
+  const foodOrder = orderCreator.createFoodOrderForCustomer(customer);
+  console.log('The following food order has been created:', foodOrder);
+
+  let socket = socketManager.socket;
+  orderHandler.sendFoodOrderToRestaurant(socket, foodOrder);
 }, 11000);
