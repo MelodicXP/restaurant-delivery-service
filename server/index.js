@@ -31,7 +31,7 @@ rds.on('connection', (socket) => {
   // Handle joining rooms
   socket.on('JOIN', (customerRoom) => {
     socket.join(customerRoom);
-    console.log(`Socket ${socket.id} joined ${customerRoom} room`);
+    console.log(`Socket ${socket.id} joined customer ${customerRoom}'s room`);
   });
   
 });
