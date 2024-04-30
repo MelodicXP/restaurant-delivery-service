@@ -47,7 +47,7 @@ rds.on('connection', (socket) => {
 
   // Handle Food Order Ready (send to restaurant)
   socket.on('FOOD_ORDER_READY', (foodOrder) => {
-    socket.broadcast.emit('PICKUP', foodOrder);
+    socket.broadcast.emit('FOOD_ORDER_READY', foodOrder);
   });
   
 });
