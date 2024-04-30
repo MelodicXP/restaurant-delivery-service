@@ -14,9 +14,7 @@ const orderHandler = require('./handler');
 const customer = orderCreator.createCustomer();
 
 // Join room using socket manager
-socketManager.joinRoom(customer.customerRoom, () => {
-  console.log(`Joined ${customer.customerRoom} room`);
-}); 
+socketManager.joinRoom(customer.customerRoom); 
 
 // Schedule food orders to be sent regularly (every 11s)
 setInterval(() => {
