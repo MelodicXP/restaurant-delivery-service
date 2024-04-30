@@ -15,6 +15,7 @@ const rds = server.of('/rds');
 const PORT = process.env.PORT || 3002;
 
 // Instantiate queues for handling orders
+// const queue = new Queue();
 // const driverQueue = new Queue(); // holds notitications of food ready for pickup
 // const customerAndRestaurantQueue = new Queue(); // holds notifications of food delivered
 
@@ -32,6 +33,21 @@ rds.on('connection', (socket) => {
   socket.on('JOIN', (customerRoom) => {
     socket.join(customerRoom);
     console.log(`Socket ${socket.id} joined customer ${customerRoom}'s room`);
+  });
+
+  // Log every event coming into namespace
+  socket.onAny((event, foodOrder) => {
+    const time = new Date();
+    console.log('EVENT:', {
+      event,
+      time,
+      foodOrder,
+    });
+  });
+
+  // Handle Food Order Ready (send to restaurant)
+  socket.on('FOOD_ORDER_READY', (foodOrder) => {
+    socket.broadcast.emit('PICKUP', foodOrder);
   });
   
 });
