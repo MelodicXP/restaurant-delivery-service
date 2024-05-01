@@ -5,7 +5,7 @@ require('dotenv').config({ path: './.env'});
 
 // Imports
 const socketManager = require('../socketManager');
-// const handleFoodPrepAndNotifyDriver = require('../restaurant/handler');
+const handleFoodPrepAndNotifyDriver = require('../restaurant/handler');
 
 // Contain list of customer rooms joined
 let joinedRooms = new Set();
@@ -32,10 +32,10 @@ socketManager.listenForEvent('NEW_CUSTOMER_ROOM', (customerRoom) => {
   }
 });
 
-// Todo - Listen for food order ready
-// socketManager.listenForEvent('FOOD_ORDER_READY', (foodOrder) => {
-//   processFoodOrder(foodOrder);
-// });
+// Listen for food order ready
+socketManager.listenForEvent('FOOD_ORDER_READY', (foodOrder) => {
+  processFoodOrder(foodOrder);
+});
 
 //*------ Helper Functions ------*/
 
@@ -46,16 +46,16 @@ function joinRoomAndRequestOrders(room) {
   socketManager.emitEvent('GET_FOOD_ORDERS', {customerRoom: room});
 }
 
-// Process order (prep food and notify driver ready for pickup)
-// function processFoodOrder(order) {
-//   let socket = socketManager.socket;
-//   setTimeout(() => {
-//     handleFoodPrepAndNotifyDriver.simulateFoodPrep(socket, order);
-//   }, 2000);
-//   setTimeout(() => {
-//     handleFoodPrepAndNotifyDriver.simulateNotifyDriverToPickUpOrder(socket, order);
-//   }, 4000);
-// }
+//Process food order (prep food and notify driver ready for pickup)
+function processFoodOrder(foodOrder) {
+  let socket = socketManager.socket;
+  setTimeout(() => {
+    handleFoodPrepAndNotifyDriver.simulateFoodPrep(socket, foodOrder);
+  }, 2000);
+  setTimeout(() => {
+    handleFoodPrepAndNotifyDriver.simulateNotifyDriverToPickUpOrder(socket, foodOrder);
+  }, 4000);
+}
 
 
 
