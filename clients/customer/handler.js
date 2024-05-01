@@ -1,7 +1,7 @@
 'use strict';
 
 function sendFoodOrderToRestaurant (socket, foodOrder) {
-  console.log(`---------------Food Order ID: ${foodOrder.orderID} sent to Restaurant-------------`);
+  console.log(`\n Food Order ID: ${foodOrder.orderID} sent to Restaurant`);
   socket.emit('FOOD_ORDER_READY', foodOrder);
 }
 
