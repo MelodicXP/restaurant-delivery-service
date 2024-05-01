@@ -97,5 +97,15 @@ rds.on('connection', (socket) => {
       console.log('No orders found or empty order queue');
     }
   });
+
+  // Listen for PREPARING_FOOD event to notify customer of status
+  socket.on('PREPARING_FOOD', (foodOrder) => {
+    socket.to(foodOrder.customerRoom).emit('PREPARING_FOOD', foodOrder);
+  });
+
+  // Listen for PREPARING_FOOD event to notify customer and driver that order is ready to pick up
+  socket.on('READY_FOR_PICKUP', (foodOrder) => {
+    socket.to(foodOrder.customerRoom).emit('READY_FOR_PICKUP', foodOrder);
+  });
   
 });
