@@ -5,7 +5,7 @@ require('dotenv').config({ path: './.env' });
 
 // Imports for external dependencies
 const { Server } = require('socket.io');
-// const Queue = require('./lib/Queue');
+const Queue = require('./lib/Queue');
 
 // Server setup
 const server = new Server();
@@ -15,8 +15,8 @@ const rds = server.of('/rds');
 const PORT = process.env.PORT || 3002;
 
 
-// Instantiate queues for handling orders
-// const queue = new Queue();
+// Instantiate queue for handling orders
+const rdsQueue = new Queue();
 // const driverQueue = new Queue(); // holds notitications of food ready for pickup
 // const customerAndRestaurantQueue = new Queue(); // holds notifications of food delivered
 
@@ -54,10 +54,48 @@ rds.on('connection', (socket) => {
     socket.emit('EXISTING_CUSTOMER_ROOMS', Array.from(customerRooms));
   });
 
-  // Todo - Listen for 'FOOD_ORDER_READY' events to forward food orders to all clients in the relevant room.
-  // Handle Food Order Ready (send to restaurant)
+  // Listen for 'FOOD_ORDER_READY' events, store orders in customer queue, forward food orders to restaurant
   socket.on('FOOD_ORDER_READY', (foodOrder) => {
-    socket.broadcast.emit('FOOD_ORDER_READY', foodOrder);
+    let customerRoom = foodOrder.customerRoom; 
+    let orderID = foodOrder.orderID;
+
+    // Attempt to get the customer orders queue from the rdsQueue manager.
+    let customerOrders = rdsQueue.getOrder(customerRoom);
+
+    // Check if the customer already has an order queue.
+    if (customerOrders) {
+      // If customer has an existing queue, proceed to add the new food order.
+      customerOrders.addOrder(orderID, foodOrder);
+    } else {
+      // No existing queue for this customer, create one, then retrieve and add food order to it.
+      let customerQueueId = rdsQueue.addOrder(foodOrder.customerRoom, new Queue());
+      customerOrders = rdsQueue.getOrder(customerQueueId);
+      customerOrders.addOrder(orderID, foodOrder);
+    }
+    socket.to(customerRoom).emit('FOOD_ORDER_READY', foodOrder);
+  });
+
+  // Get food orders from customer room queue
+  socket.on('GET_FOOD_ORDERS', (room) => {
+    let customerRoom = room.customerRoom;
+
+    console.log(`Emitting customer orders for: ${customerRoom}`);
+
+    // Attempt to get the vendor's order queue from the orderQueue manager.
+    let customerOrders = rdsQueue.getOrder(customerRoom);
+
+    // Check if orders exist to process
+    let ordersExist = customerOrders && Object.keys(customerOrders).length > 0;
+    
+    if(ordersExist){
+      Object.keys(customerOrders.orders).forEach(orderID => {
+        // Emit event for each order in the queue
+        const orderDetails = customerOrders.orders[orderID];
+        socket.emit('FOOD_ORDER_READY', orderDetails);
+      });
+    } else {
+      console.log('No orders found or empty order queue');
+    }
   });
   
 });
