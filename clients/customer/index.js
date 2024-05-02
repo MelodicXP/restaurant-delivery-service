@@ -22,6 +22,12 @@ socketManager.emitEvent('GET_PREPARING_FOOD_NOTIFICATIONS', {customerRoom: custo
 // Listen for notification/event of PREPARING_FOOD
 socketManager.listenForEvent('PREPARING_FOOD', (foodOrder) => {
   console.log(`Status Update: ${foodOrder.customerName} your food order# ${foodOrder.orderID} is being prepared`);
+
+  // Send acknowledgment back to the server
+  socketManager.emitEvent('ACKNOWLEDGE_PREP_FOOD', {
+    customerRoom: customer.customerRoom,
+    orderID: foodOrder.orderID,
+  });
 });
 
 // Request the server send back all 'ready for pick up' notifications
@@ -30,6 +36,12 @@ socketManager.emitEvent('GET_READY_FOR_PICKUP_NOTIFICATIONS', {customerRoom: cus
 // Listen for notification/event of READY_FOR_PICKUP
 socketManager.listenForEvent('READY_FOR_PICKUP', (foodOrder) => {
   console.log(`Status Update: ${foodOrder.customerName} a driver has been notified to pick up your food order# ${foodOrder.orderID}`);
+
+  // Send acknowledgment back to the server
+  socketManager.emitEvent('ACKNOWLEDGE_READY_FOR_PICKUP', {
+    customerRoom: customer.customerRoom,
+    orderID: foodOrder.orderID,
+  });
 });
 
 // Schedule food orders to be sent regularly (every 11s)
