@@ -56,71 +56,47 @@ rds.on('connection', (socket) => {
 
   // Listen for 'FOOD_ORDER_READY' events, store orders in customer queue, forward food orders to restaurant
   socket.on('FOOD_ORDER_READY', (foodOrder) => {
-    let customerRoom = foodOrder.customerRoom; 
-    let orderID = foodOrder.orderID;
+    manageQueue('FOOD_ORDER_READY', socket, rdsQueue, foodOrder);
+  });
 
-    // Attempt to get the customer orders queue from the rdsQueue manager.
-    let customerOrders = rdsQueue.getOrder(customerRoom);
+  // Listen for acknowledgement from client that nofication ahs been received and remove from queue
+  socket.on('ACKNOWLEDGE_FOOD_ORDER_READY', (acknowledgment) => {
+    let { customerRoom, orderID } = acknowledgment;
 
-    // Check if the customer already has an order queue.
-    if (customerOrders) {
-      // If customer has an existing queue, proceed to add the new food order.
-      customerOrders.addOrder(orderID, foodOrder);
-    } else {
-      // No existing queue for this customer, create one, then retrieve and add food order to it.
-      let customerQueueId = rdsQueue.addOrder(foodOrder.customerRoom, new Queue());
-      customerOrders = rdsQueue.getOrder(customerQueueId);
-      customerOrders.addOrder(orderID, foodOrder);
+    let foodOrderReadyNotifications = rdsQueue.getOrder(customerRoom);
+
+    if (foodOrderReadyNotifications && foodOrderReadyNotifications.hasOrder(orderID)) {
+      foodOrderReadyNotifications.removeOrder(orderID);
+      console.log(`Acknowledged and removed food ready notification for order# ${orderID}`);
     }
-    socket.to(customerRoom).emit('FOOD_ORDER_READY', foodOrder);
   });
 
   // Get food orders from customer room queue
   socket.on('GET_FOOD_ORDERS', (room) => {
     let customerRoom = room.customerRoom;
 
-    console.log(`Emitting customer orders for: ${customerRoom}`);
+    console.log(`Emitting food ready orders for: ${customerRoom}`);
 
     // Attempt to get the customer's order queue from the rdsQueue manager.
     let customerOrders = rdsQueue.getOrder(customerRoom);
-
-    // Check if orders exist to process
-    let ordersExist = customerOrders && Object.keys(customerOrders).length > 0;
     
-    if(ordersExist){
+    if(customerOrders){
       Object.keys(customerOrders.orders).forEach(orderID => {
         // Emit event for each order in the queue
         const orderDetails = customerOrders.orders[orderID];
         socket.emit('FOOD_ORDER_READY', orderDetails);
       });
     } else {
-      console.log('No orders found or empty order queue');
+      console.log('No customer food orders found or empty order queue');
     }
   });
 
   // Listen for PREPARING_FOOD event, store notifications in queue, notify customer of status
   socket.on('PREPARING_FOOD', (foodOrder) => {
-    let customerRoom = foodOrder.customerRoom;
-    let orderID = foodOrder.orderID;
-
-    // Attempt to get preparing food notifications if any from preparingFoodQueue
-    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
-
-    // If no existing queue for this customer, create one, then retrieve and add food order to it.
-    if (!prepFoodNotifications) {
-      let customerQueueID = preparingFoodQueue.addOrder(customerRoom, new Queue());
-      prepFoodNotifications = preparingFoodQueue.getOrder(customerQueueID);
-      prepFoodNotifications.addOrder(orderID, foodOrder);
-    }
-
-    // If queue (prep food notifiations) does not contain orderID passed in, add to queue
-    if (!prepFoodNotifications.hasOrder(orderID)) {
-      prepFoodNotifications.addOrder(orderID, foodOrder);
-    }
-    socket.to(customerRoom).emit('PREPARING_FOOD', foodOrder);
+    manageQueue('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
   });
 
-  // Listen for Acknowledgment from client that notification has been received.
+  // Listen for Acknowledgment from client that notification has been received and remove from queue
   socket.on('ACKNOWLEDGE_PREP_FOOD', (acknowledgment) => {
     let { customerRoom, orderID } = acknowledgment;
 
@@ -128,7 +104,7 @@ rds.on('connection', (socket) => {
     
     if (prepFoodNotifications && prepFoodNotifications.hasOrder(orderID)) {
       prepFoodNotifications.removeOrder(orderID);
-      console.log(`Acknowledged and removed prep food notification for order ${orderID}`);
+      console.log(`Acknowledged and removed prep food notification for order# ${orderID}`);
     }
   });
 
@@ -155,26 +131,22 @@ rds.on('connection', (socket) => {
 
   // Listen for READY FOR PICKUP event to notify customer and driver that order is ready to pick up
   socket.on('READY_FOR_PICKUP', (foodOrder) => {
-    let customerRoom = foodOrder.customerRoom;
-    let orderID = foodOrder.orderID;
-
-    // Attempt to get preparing food notifications if any from preparingFoodQueue
-    let readyForPickupNotifications = readyForPickupQueue.getOrder(customerRoom);
-
-    // Check if customer already has a prep food notification queue
-    if (readyForPickupNotifications) {
-      // if queue exists, and food order to queue
-      readyForPickupNotifications.addOrder(orderID, foodOrder);
-    } else {
-      // No existing queue for this customer, create one, then retrieve and add food order to it.
-      let customerQueueID = readyForPickupQueue.addOrder(foodOrder.customerRoom, new Queue());
-      readyForPickupNotifications = readyForPickupQueue.getOrder(customerQueueID);
-      readyForPickupNotifications.addOrder(orderID, foodOrder);
-    }
-    socket.to(foodOrder.customerRoom).emit('READY_FOR_PICKUP', foodOrder);
+    manageQueue('READY_FOR_PICKUP', socket, readyForPickupQueue, foodOrder);
   });
 
-  // Todo - get ready for pick up notifications from queue
+  // Listen for acknowledgement from client that notification has been received and remove from queue
+  socket.on('ACKNOWLEDGE_READY_FOR_PICKUP', (acknowledgment) => {
+    let { customerRoom, orderID } = acknowledgment;
+
+    let readyForPickUpNotifications = readyForPickupQueue.getOrder(customerRoom);
+    
+    if (readyForPickUpNotifications && readyForPickUpNotifications.hasOrder(orderID)) {
+      readyForPickUpNotifications.removeOrder(orderID);
+      console.log(`Acknowledged and removed 'ready for pickup' notificaton for order# ${orderID}`);
+    }
+  });
+
+  // Get 'ready for pick up notifications' from queue
   socket.on('GET_READY_FOR_PICKUP_NOTIFICATIONS', (foodOrder) => {
     let customerRoom = foodOrder.customerRoom;
 
@@ -183,10 +155,8 @@ rds.on('connection', (socket) => {
     // Attempt to get customer prep food notification queue from readyForPickUpQueue manager.
     let readyForPickupNotifications = readyForPickupQueue.getOrder(customerRoom);
 
-    // Check if orders exist to process
-    let notificationsExist = readyForPickupNotifications && Object.keys(readyForPickupNotifications).length > 0;
-    
-    if(notificationsExist){
+    // Check if notifications exist to process
+    if(readyForPickupNotifications){
       Object.keys(readyForPickupNotifications.orders).forEach(orderID => {
         // Emit event for each order in the queue
         const orderDetails = readyForPickupNotifications.orders[orderID];
@@ -199,3 +169,26 @@ rds.on('connection', (socket) => {
   
 });
 
+//*------ Helper Functions ------*/
+
+// Add to queue, if id does not exist add to queue
+function manageQueue(eventType, socket, queue, foodOrder) {
+  const { customerRoom, orderID } = foodOrder;
+
+  // Attempt to get data from queue
+  let notifications = queue.getOrder(customerRoom);
+
+  // If no existing notification queues, create one, then retrieve and add food order to it
+  if (!notifications) {
+    let customerQueueID = queue.addOrder(customerRoom, new Queue());
+    notifications = queue.getOrder(customerQueueID);
+    notifications.addOrder(orderID, foodOrder);
+  }
+
+  // If queue does not contain orderID passed in, add to queue
+  if (!notifications.hasOrder(orderID)) {
+    notifications.addOrder(orderID, foodOrder);
+  }
+
+  socket.to(customerRoom).emit(eventType, foodOrder);
+}
