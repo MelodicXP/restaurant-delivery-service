@@ -61,14 +61,7 @@ rds.on('connection', (socket) => {
 
   // Listen for acknowledgement from client that nofication ahs been received and remove from queue
   socket.on('ACKNOWLEDGE_FOOD_ORDER_READY', (acknowledgment) => {
-    let { customerRoom, orderID } = acknowledgment;
-
-    let foodOrderReadyNotifications = rdsQueue.getOrder(customerRoom);
-
-    if (foodOrderReadyNotifications && foodOrderReadyNotifications.hasOrder(orderID)) {
-      foodOrderReadyNotifications.removeOrder(orderID);
-      console.log(`Acknowledged and removed food ready notification for order# ${orderID}`);
-    }
+    acknowledgeOrder(rdsQueue, acknowledgment);
   });
 
   // Get food orders from customer room queue
@@ -191,4 +184,15 @@ function manageQueue(eventType, socket, queue, foodOrder) {
   }
 
   socket.to(customerRoom).emit(eventType, foodOrder);
+}
+
+// Acknowledge notifications from client
+function acknowledgeOrder(queue, acknowledgment) {
+  const { customerRoom, orderID } = acknowledgment;
+  let notifications = queue.getOrder(customerRoom);
+
+  if (notifications && notifications.hasOrder(orderID)) {
+    notifications.removeOrder(orderID);
+    console.log(`Acknowledged and removed notification for order# ${orderID}`);
+  }
 }
