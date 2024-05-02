@@ -34,6 +34,11 @@ socketManager.listenForEvent('NEW_CUSTOMER_ROOM', (customerRoom) => {
 
 // Listen for food order ready
 socketManager.listenForEvent('FOOD_ORDER_READY', (foodOrder) => {
+  // Send acknowledgment back to the server
+  socketManager.emitEvent('ACKNOWLEDGE_FOOD_ORDER_READY', {
+    customerRoom: foodOrder.customerRoom,
+    orderID: foodOrder.orderID,
+  });
   processFoodOrder(foodOrder);
 });
 
