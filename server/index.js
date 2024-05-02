@@ -106,17 +106,30 @@ rds.on('connection', (socket) => {
     // Attempt to get preparing food notifications if any from preparingFoodQueue
     let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
 
-    // Check if customer already has a prep food notification queue
-    if (prepFoodNotifications) {
-      // if queue exists, and food order to queue
-      prepFoodNotifications.addOrder(orderID, foodOrder);
-    } else {
-      // No existing queue for this customer, create one, then retrieve and add food order to it.
-      let customerQueueID = preparingFoodQueue.addOrder(foodOrder.customerRoom, new Queue());
+    // If no existing queue for this customer, create one, then retrieve and add food order to it.
+    if (!prepFoodNotifications) {
+      let customerQueueID = preparingFoodQueue.addOrder(customerRoom, new Queue());
       prepFoodNotifications = preparingFoodQueue.getOrder(customerQueueID);
       prepFoodNotifications.addOrder(orderID, foodOrder);
     }
+
+    // If queue (prep food notifiations) does not contain orderID passed in, add to queue
+    if (!prepFoodNotifications.hasOrder(orderID)) {
+      prepFoodNotifications.addOrder(orderID, foodOrder);
+    }
     socket.to(customerRoom).emit('PREPARING_FOOD', foodOrder);
+  });
+
+  // Listen for Acknowledgment from client that notification has been received.
+  socket.on('ACKNOWLEDGE_PREP_FOOD', (acknowledgment) => {
+    let { customerRoom, orderID } = acknowledgment;
+
+    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
+    
+    if (prepFoodNotifications && prepFoodNotifications.hasOrder(orderID)) {
+      prepFoodNotifications.removeOrder(orderID);
+      console.log(`Acknowledged and removed prep food notification for order ${orderID}`);
+    }
   });
 
   // Get preparing food notifications from queue
@@ -129,9 +142,7 @@ rds.on('connection', (socket) => {
     let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
 
     // Check if orders exist to process
-    let notificationsExist = prepFoodNotifications && Object.keys(prepFoodNotifications).length > 0;
-    
-    if(notificationsExist){
+    if(prepFoodNotifications){
       Object.keys(prepFoodNotifications.orders).forEach(orderID => {
         // Emit event for each order in the queue
         const orderDetails = prepFoodNotifications.orders[orderID];
