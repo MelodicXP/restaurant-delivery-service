@@ -15,6 +15,10 @@ class OrderQueue {
     return this.orders[orderID];
   }
 
+  hasOrder(orderID) {
+    return Object.prototype.hasOwnProperty.call(this.orders, orderID);
+  }
+
   removeOrder(orderID) {
     if (!this.orders[orderID]) {
       console.error('Order not found in queue');
