@@ -16,15 +16,18 @@ const customer = orderCreator.createCustomer();
 // Join room using socket manager
 socketManager.joinRoom(customer.customerRoom); 
 
+// Request the server send back all prep food notifications
+socketManager.emitEvent('GET_PREPARING_FOOD_NOTIFICATIONS', {customerRoom: customer.customerRoom });
+
 // Listen for notification/event of PREPARING_FOOD
 socketManager.listenForEvent('PREPARING_FOOD', (foodOrder) => {
   console.log(
-    `${foodOrder.customerName} your food order# ${foodOrder.orderID} is being prepared`);
+    `Status Update: ${foodOrder.customerName} your food order# ${foodOrder.orderID} is being prepared`);
 });
 
 // Listen for notification/event of READY_FOR_PICKUP
 socketManager.listenForEvent('READY_FOR_PICKUP', (foodOrder) => {
-  console.log(`${foodOrder.customerName} a driver has been notified to pick up your food order# ${foodOrder.orderID}`);
+  console.log(`Status Update: ${foodOrder.customerName} a driver has been notified to pick up your food order# ${foodOrder.orderID}`);
 });
 
 // Schedule food orders to be sent regularly (every 11s)
