@@ -25,6 +25,9 @@ socketManager.listenForEvent('PREPARING_FOOD', (foodOrder) => {
     `Status Update: ${foodOrder.customerName} your food order# ${foodOrder.orderID} is being prepared`);
 });
 
+// Request the server send back all 'ready for pick up' notifications
+socketManager.emitEvent('GET_READY_FOR_PICKUP_NOTIFICATIONS', {customerRoom: customer.customerRoom });
+
 // Listen for notification/event of READY_FOR_PICKUP
 socketManager.listenForEvent('READY_FOR_PICKUP', (foodOrder) => {
   console.log(`Status Update: ${foodOrder.customerName} a driver has been notified to pick up your food order# ${foodOrder.orderID}`);
