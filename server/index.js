@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 3002;
 
 // Instantiate queue for handling orders
 const rdsQueue = new Queue(); // For food orders
-const preparingFoodQueue = new Queue(); // For preparing food notifications
-// const customerAndRestaurantQueue = new Queue(); // holds notifications of food delivered
+const preparingFoodQueue = new Queue(); // For 'preparing food' notifications
+const readyForPickupQueue = new Queue(); // For 'ready for pick up' notifications
 
 // Set for tracking active vendor rooms
 const customerRooms = new Set();
@@ -142,9 +142,48 @@ rds.on('connection', (socket) => {
     }
   });
 
-  // Listen for PREPARING_FOOD event to notify customer and driver that order is ready to pick up
+  // Listen for READY FOR PICKUP event to notify customer and driver that order is ready to pick up
   socket.on('READY_FOR_PICKUP', (foodOrder) => {
+    let customerRoom = foodOrder.customerRoom;
+    let orderID = foodOrder.orderID;
+
+    // Attempt to get preparing food notifications if any from preparingFoodQueue
+    let readyForPickupNotifications = readyForPickupQueue.getOrder(customerRoom);
+
+    // Check if customer already has a prep food notification queue
+    if (readyForPickupNotifications) {
+      // if queue exists, and food order to queue
+      readyForPickupNotifications.addOrder(orderID, foodOrder);
+    } else {
+      // No existing queue for this customer, create one, then retrieve and add food order to it.
+      let customerQueueID = readyForPickupQueue.addOrder(foodOrder.customerRoom, new Queue());
+      readyForPickupNotifications = readyForPickupQueue.getOrder(customerQueueID);
+      readyForPickupNotifications.addOrder(orderID, foodOrder);
+    }
     socket.to(foodOrder.customerRoom).emit('READY_FOR_PICKUP', foodOrder);
+  });
+
+  // Todo - get ready for pick up notifications from queue
+  socket.on('GET_READY_FOR_PICKUP_NOTIFICATIONS', (foodOrder) => {
+    let customerRoom = foodOrder.customerRoom;
+
+    console.log(`Emitting 'ready for pickup' notifcations for: ${customerRoom}`);
+
+    // Attempt to get customer prep food notification queue from readyForPickUpQueue manager.
+    let readyForPickupNotifications = readyForPickupQueue.getOrder(customerRoom);
+
+    // Check if orders exist to process
+    let notificationsExist = readyForPickupNotifications && Object.keys(readyForPickupNotifications).length > 0;
+    
+    if(notificationsExist){
+      Object.keys(readyForPickupNotifications.orders).forEach(orderID => {
+        // Emit event for each order in the queue
+        const orderDetails = readyForPickupNotifications.orders[orderID];
+        socket.emit('READY_FOR_PICKUP', orderDetails);
+      });
+    } else {
+      console.log('No \'ready\' for pickup notifications found or empty order queue');
+    }
   });
   
 });
