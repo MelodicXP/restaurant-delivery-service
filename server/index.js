@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 3002;
 
 
 // Instantiate queue for handling orders
-const rdsQueue = new Queue();
-// const driverQueue = new Queue(); // holds notitications of food ready for pickup
+const rdsQueue = new Queue(); // For food orders
+const preparingFoodQueue = new Queue(); // For preparing food notifications
 // const customerAndRestaurantQueue = new Queue(); // holds notifications of food delivered
 
 // Set for tracking active vendor rooms
@@ -81,7 +81,7 @@ rds.on('connection', (socket) => {
 
     console.log(`Emitting customer orders for: ${customerRoom}`);
 
-    // Attempt to get the vendor's order queue from the orderQueue manager.
+    // Attempt to get the customer's order queue from the rdsQueue manager.
     let customerOrders = rdsQueue.getOrder(customerRoom);
 
     // Check if orders exist to process
@@ -98,9 +98,48 @@ rds.on('connection', (socket) => {
     }
   });
 
-  // Listen for PREPARING_FOOD event to notify customer of status
+  // Listen for PREPARING_FOOD event, store notifications in queue, notify customer of status
   socket.on('PREPARING_FOOD', (foodOrder) => {
-    socket.to(foodOrder.customerRoom).emit('PREPARING_FOOD', foodOrder);
+    let customerRoom = foodOrder.customerRoom;
+    let orderID = foodOrder.orderID;
+
+    // Attempt to get preparing food notifications if any from preparingFoodQueue
+    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
+
+    // Check if customer already has a prep food notification queue
+    if (prepFoodNotifications) {
+      // if queue exists, and food order to queue
+      prepFoodNotifications.addOrder(orderID, foodOrder);
+    } else {
+      // No existing queue for this customer, create one, then retrieve and add food order to it.
+      let customerQueueID = preparingFoodQueue.addOrder(foodOrder.customerRoom, new Queue());
+      prepFoodNotifications = preparingFoodQueue.getOrder(customerQueueID);
+      prepFoodNotifications.addOrder(orderID, foodOrder);
+    }
+    socket.to(customerRoom).emit('PREPARING_FOOD', foodOrder);
+  });
+
+  // Get preparing food notifications from queue
+  socket.on('GET_PREPARING_FOOD_NOTIFICATIONS', (foodOrder) => {
+    let customerRoom = foodOrder.customerRoom;
+
+    console.log(`Emitting preparing food notifications for: ${customerRoom}`);
+
+    // Attempt to get customer prep food notification queue from preparingFoodQueue manager.
+    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
+
+    // Check if orders exist to process
+    let notificationsExist = prepFoodNotifications && Object.keys(prepFoodNotifications).length > 0;
+    
+    if(notificationsExist){
+      Object.keys(prepFoodNotifications.orders).forEach(orderID => {
+        // Emit event for each order in the queue
+        const orderDetails = prepFoodNotifications.orders[orderID];
+        socket.emit('PREPARING_FOOD', orderDetails);
+      });
+    } else {
+      console.log('No prep food notifications found or empty order queue');
+    }
   });
 
   // Listen for PREPARING_FOOD event to notify customer and driver that order is ready to pick up
@@ -109,3 +148,4 @@ rds.on('connection', (socket) => {
   });
   
 });
+
