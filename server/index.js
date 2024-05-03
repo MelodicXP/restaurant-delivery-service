@@ -91,14 +91,7 @@ rds.on('connection', (socket) => {
 
   // Listen for Acknowledgment from client that notification has been received and remove from queue
   socket.on('ACKNOWLEDGE_PREP_FOOD', (acknowledgment) => {
-    let { customerRoom, orderID } = acknowledgment;
-
-    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
-    
-    if (prepFoodNotifications && prepFoodNotifications.hasOrder(orderID)) {
-      prepFoodNotifications.removeOrder(orderID);
-      console.log(`Acknowledged and removed prep food notification for order# ${orderID}`);
-    }
+    acknowledgeOrder(preparingFoodQueue, acknowledgment);
   });
 
   // Get preparing food notifications from queue
@@ -129,14 +122,7 @@ rds.on('connection', (socket) => {
 
   // Listen for acknowledgement from client that notification has been received and remove from queue
   socket.on('ACKNOWLEDGE_READY_FOR_PICKUP', (acknowledgment) => {
-    let { customerRoom, orderID } = acknowledgment;
-
-    let readyForPickUpNotifications = readyForPickupQueue.getOrder(customerRoom);
-    
-    if (readyForPickUpNotifications && readyForPickUpNotifications.hasOrder(orderID)) {
-      readyForPickUpNotifications.removeOrder(orderID);
-      console.log(`Acknowledged and removed 'ready for pickup' notificaton for order# ${orderID}`);
-    }
+    acknowledgeOrder(readyForPickupQueue, acknowledgment);
   });
 
   // Get 'ready for pick up notifications' from queue
@@ -186,7 +172,7 @@ function manageQueue(eventType, socket, queue, foodOrder) {
   socket.to(customerRoom).emit(eventType, foodOrder);
 }
 
-// Acknowledge notifications from client
+// Remove from queue acknowledged notifications from client
 function acknowledgeOrder(queue, acknowledgment) {
   const { customerRoom, orderID } = acknowledgment;
   let notifications = queue.getOrder(customerRoom);
