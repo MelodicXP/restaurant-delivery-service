@@ -15,7 +15,6 @@ const rds = server.of('/rds');
 // Constants
 const PORT = process.env.PORT || 3002;
 
-
 // Instantiate queue for handling orders
 const rdsQueue = new Queue(); // For food orders
 const preparingFoodQueue = new Queue(); // For 'preparing food' notifications
