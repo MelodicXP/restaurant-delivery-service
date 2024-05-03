@@ -6,6 +6,7 @@ require('dotenv').config({ path: './.env' });
 // Imports for external dependencies
 const { Server } = require('socket.io');
 const Queue = require('./lib/Queue');
+const { socket } = require('../clients/socketManager');
 
 // Server setup
 const server = new Server();
@@ -66,22 +67,7 @@ rds.on('connection', (socket) => {
 
   // Get food orders from customer room queue
   socket.on('GET_FOOD_ORDERS', (room) => {
-    let customerRoom = room.customerRoom;
-
-    console.log(`Emitting food ready orders for: ${customerRoom}`);
-
-    // Attempt to get the customer's order queue from the rdsQueue manager.
-    let customerOrders = rdsQueue.getOrder(customerRoom);
-    
-    if(customerOrders){
-      Object.keys(customerOrders.orders).forEach(orderID => {
-        // Emit event for each order in the queue
-        const orderDetails = customerOrders.orders[orderID];
-        socket.emit('FOOD_ORDER_READY', orderDetails);
-      });
-    } else {
-      console.log('No customer food orders found or empty order queue');
-    }
+    emitAllNotifications('FOOD_ORDER_READY', rdsQueue, room);
   });
 
   // Listen for PREPARING_FOOD event, store notifications in queue, notify customer of status
@@ -96,23 +82,7 @@ rds.on('connection', (socket) => {
 
   // Get preparing food notifications from queue
   socket.on('GET_PREPARING_FOOD_NOTIFICATIONS', (foodOrder) => {
-    let customerRoom = foodOrder.customerRoom;
-
-    console.log(`Emitting preparing food notifications for: ${customerRoom}`);
-
-    // Attempt to get customer prep food notification queue from preparingFoodQueue manager.
-    let prepFoodNotifications = preparingFoodQueue.getOrder(customerRoom);
-
-    // Check if orders exist to process
-    if(prepFoodNotifications){
-      Object.keys(prepFoodNotifications.orders).forEach(orderID => {
-        // Emit event for each order in the queue
-        const orderDetails = prepFoodNotifications.orders[orderID];
-        socket.emit('PREPARING_FOOD', orderDetails);
-      });
-    } else {
-      console.log('No prep food notifications found or empty order queue');
-    }
+    emitAllNotifications('PREPARING_FOOD', preparingFoodQueue, foodOrder);
   });
 
   // Listen for READY FOR PICKUP event to notify customer and driver that order is ready to pick up
@@ -127,23 +97,7 @@ rds.on('connection', (socket) => {
 
   // Get 'ready for pick up notifications' from queue
   socket.on('GET_READY_FOR_PICKUP_NOTIFICATIONS', (foodOrder) => {
-    let customerRoom = foodOrder.customerRoom;
-
-    console.log(`Emitting 'ready for pickup' notifcations for: ${customerRoom}`);
-
-    // Attempt to get customer prep food notification queue from readyForPickUpQueue manager.
-    let readyForPickupNotifications = readyForPickupQueue.getOrder(customerRoom);
-
-    // Check if notifications exist to process
-    if(readyForPickupNotifications){
-      Object.keys(readyForPickupNotifications.orders).forEach(orderID => {
-        // Emit event for each order in the queue
-        const orderDetails = readyForPickupNotifications.orders[orderID];
-        socket.emit('READY_FOR_PICKUP', orderDetails);
-      });
-    } else {
-      console.log('No \'ready\' for pickup notifications found or empty order queue');
-    }
+    emitAllNotifications('READY_FOR_PICKUP', readyForPickupQueue, foodOrder);
   });
   
 });
@@ -172,7 +126,7 @@ function manageQueue(eventType, socket, queue, foodOrder) {
   socket.to(customerRoom).emit(eventType, foodOrder);
 }
 
-// Remove from queue acknowledged notifications from client
+// Remove acknowledged notifications from queue
 function acknowledgeOrder(queue, acknowledgment) {
   const { customerRoom, orderID } = acknowledgment;
   let notifications = queue.getOrder(customerRoom);
@@ -182,3 +136,22 @@ function acknowledgeOrder(queue, acknowledgment) {
     console.log(`Acknowledged and removed notification for order# ${orderID}`);
   }
 }
+
+// Get notifications from queue, and send for emission
+function emitAllNotifications(eventType, queue, foodOrder) {
+  const { customerRoom } = foodOrder;
+  console.log(`Emitting ${eventType} notifications for ${customerRoom}`);
+
+  // Attempt to get notifications from queue.
+  let notifications = queue.getOrder(customerRoom);
+
+  // If notifications exist, emit notification for each order in the queue
+  if (notifications) {
+    Object.keys(notifications.orders).forEach(orderID => {
+      const orderDetails = notifications.orders[orderID];
+      socket.emit(eventType, orderDetails);
+    });
+  } else {
+    console.log(`No ${eventType} notifications found or empty queue`);
+  }
+} 
