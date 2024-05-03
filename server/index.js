@@ -6,7 +6,6 @@ require('dotenv').config({ path: './.env' });
 // Imports for external dependencies
 const { Server } = require('socket.io');
 const Queue = require('./lib/Queue');
-const { socket } = require('../clients/socketManager');
 
 // Server setup
 const server = new Server();
@@ -66,7 +65,7 @@ rds.on('connection', (socket) => {
 
   // Get food orders from customer room queue
   socket.on('GET_FOOD_ORDERS', (room) => {
-    emitAllNotifications('FOOD_ORDER_READY', rdsQueue, room);
+    emitAllNotifications('FOOD_ORDER_READY', socket, rdsQueue, room);
   });
 
   // Listen for PREPARING_FOOD event, store notifications in queue, notify customer of status
@@ -81,7 +80,7 @@ rds.on('connection', (socket) => {
 
   // Get preparing food notifications from queue
   socket.on('GET_PREPARING_FOOD_NOTIFICATIONS', (foodOrder) => {
-    emitAllNotifications('PREPARING_FOOD', preparingFoodQueue, foodOrder);
+    emitAllNotifications('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
   });
 
   // Listen for READY FOR PICKUP event to notify customer and driver that order is ready to pick up
@@ -96,7 +95,7 @@ rds.on('connection', (socket) => {
 
   // Get 'ready for pick up notifications' from queue
   socket.on('GET_READY_FOR_PICKUP_NOTIFICATIONS', (foodOrder) => {
-    emitAllNotifications('READY_FOR_PICKUP', readyForPickupQueue, foodOrder);
+    emitAllNotifications('READY_FOR_PICKUP', socket, readyForPickupQueue, foodOrder);
   });
   
 });
@@ -137,7 +136,7 @@ function acknowledgeOrder(queue, acknowledgment) {
 }
 
 // Get notifications from queue, and send for emission
-function emitAllNotifications(eventType, queue, foodOrder) {
+function emitAllNotifications(eventType, socket, queue, foodOrder) {
   const { customerRoom } = foodOrder;
   console.log(`Emitting ${eventType} notifications for ${customerRoom}`);
 
