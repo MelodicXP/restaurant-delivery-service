@@ -14,13 +14,14 @@ const rds = server.of('/rds');
 // Constants
 const PORT = process.env.PORT || 3002;
 
-// Instantiate queue for handling orders
+// Instantiate queues for handling notifications
 const rdsQueue = new Queue(); // For food orders
 const preparingFoodQueue = new Queue(); // For 'preparing food' notifications
 const clientReadyForPickupQueue = new Queue(); // hold client 'ready for pick up' notifications
 const driverReadyForPickupQueue = new Queue(); // Queue for 'driver pick up' notifications
 const deliveredNotificationCustomerQueue = new Queue();
-// const deliveredNotificationDriverQueue = new Queue();
+const deliveredNotificationRestaurantQueue = new Queue();
+
 // Set for tracking active vendor rooms
 const customerRooms = new Set();
 
@@ -113,6 +114,18 @@ rds.on('connection', (socket) => {
 
   socket.on('GET_DELIVERED_NOTIFICATIONS_CUST', (foodOrder) => {
     getFromQueueAndEmitNotifications('DELIVERED_NOTIFICATION_CUST', socket, deliveredNotificationCustomerQueue, foodOrder);
+  });
+
+  socket.on('DELIVERED_NOTIFICATION_RESTAURANT', (foodOrder) => {
+    addToQueueAndEmitToRoom('DELIVERED_NOTIFICATION_RESTAURANT', socket, deliveredNotificationRestaurantQueue, foodOrder);
+  });
+
+  socket.on('ACKNOWLEDGE_DELIVERED_NOTIFICATION_RESTAURANT', (acknowledgment) => {
+    acknowledgeAndRemoveFromQueue(deliveredNotificationRestaurantQueue, acknowledgment);
+  });
+
+  socket.on('GET_DELIVERED_NOTIFICATIONS_RESTAURANT', (foodOrder) => {
+    getFromQueueAndEmitNotifications('DELIVERED_NOTIFICATION_RESTAURANT', socket, deliveredNotificationRestaurantQueue, foodOrder);
   });
   
 });
