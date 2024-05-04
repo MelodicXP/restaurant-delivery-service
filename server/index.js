@@ -17,8 +17,10 @@ const PORT = process.env.PORT || 3002;
 // Instantiate queue for handling orders
 const rdsQueue = new Queue(); // For food orders
 const preparingFoodQueue = new Queue(); // For 'preparing food' notifications
-const readyForPickupQueue = new Queue(); // For 'ready for pick up' notifications
-
+const clientReadyForPickupQueue = new Queue(); // hold client 'ready for pick up' notifications
+const driverReadyForPickupQueue = new Queue(); // Queue for 'driver pick up' notifications
+const deliveredNotificationCustomerQueue = new Queue();
+// const deliveredNotificationDriverQueue = new Queue();
 // Set for tracking active vendor rooms
 const customerRooms = new Set();
 
@@ -53,49 +55,64 @@ rds.on('connection', (socket) => {
     socket.emit('EXISTING_CUSTOMER_ROOMS', Array.from(customerRooms));
   });
 
-  // Listen for 'FOOD_ORDER_READY' events, store orders in customer queue, forward food orders to restaurant
   socket.on('FOOD_ORDER_READY', (foodOrder) => {
-    manageQueue('FOOD_ORDER_READY', socket, rdsQueue, foodOrder);
+    addToQueueAndEmitToRoom('FOOD_ORDER_READY', socket, rdsQueue, foodOrder);
   });
 
-  // Listen for acknowledgement from client that nofication ahs been received and remove from queue
   socket.on('ACKNOWLEDGE_FOOD_ORDER_READY', (acknowledgment) => {
-    acknowledgeOrder(rdsQueue, acknowledgment);
+    acknowledgeAndRemoveFromQueue(rdsQueue, acknowledgment);
   });
 
-  // Get food orders from customer room queue
   socket.on('GET_FOOD_ORDERS', (room) => {
-    emitAllNotifications('FOOD_ORDER_READY', socket, rdsQueue, room);
+    getFromQueueAndEmitNotifications('FOOD_ORDER_READY', socket, rdsQueue, room);
   });
 
-  // Listen for PREPARING_FOOD event, store notifications in queue, notify customer of status
   socket.on('PREPARING_FOOD', (foodOrder) => {
-    manageQueue('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
+    addToQueueAndEmitToRoom('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
   });
 
-  // Listen for Acknowledgment from client that notification has been received and remove from queue
   socket.on('ACKNOWLEDGE_PREP_FOOD', (acknowledgment) => {
-    acknowledgeOrder(preparingFoodQueue, acknowledgment);
+    acknowledgeAndRemoveFromQueue(preparingFoodQueue, acknowledgment);
   });
 
-  // Get preparing food notifications from queue
   socket.on('GET_PREPARING_FOOD_NOTIFICATIONS', (foodOrder) => {
-    emitAllNotifications('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
+    getFromQueueAndEmitNotifications('PREPARING_FOOD', socket, preparingFoodQueue, foodOrder);
   });
 
-  // Listen for READY FOR PICKUP event to notify customer and driver that order is ready to pick up
   socket.on('READY_FOR_PICKUP', (foodOrder) => {
-    manageQueue('READY_FOR_PICKUP', socket, readyForPickupQueue, foodOrder);
+    addToQueueAndEmitToRoom('READY_FOR_PICKUP', socket, clientReadyForPickupQueue, foodOrder);
   });
 
-  // Listen for acknowledgement from client that notification has been received and remove from queue
   socket.on('ACKNOWLEDGE_READY_FOR_PICKUP', (acknowledgment) => {
-    acknowledgeOrder(readyForPickupQueue, acknowledgment);
+    acknowledgeAndRemoveFromQueue(clientReadyForPickupQueue, acknowledgment);
   });
 
-  // Get 'ready for pick up notifications' from queue
   socket.on('GET_READY_FOR_PICKUP_NOTIFICATIONS', (foodOrder) => {
-    emitAllNotifications('READY_FOR_PICKUP', socket, readyForPickupQueue, foodOrder);
+    getFromQueueAndEmitNotifications('READY_FOR_PICKUP', socket, clientReadyForPickupQueue, foodOrder);
+  });
+
+  socket.on('DRIVER_PICK_UP', (foodOrder) => {
+    addToQueueAndEmitToRoom('DRIVER_PICK_UP', socket, driverReadyForPickupQueue, foodOrder);
+  });
+
+  socket.on('ACKNOWLEDGE_DRIVER_PICK_UP', (acknowledgment) => {
+    acknowledgeAndRemoveFromQueue(driverReadyForPickupQueue, acknowledgment);
+  });
+
+  socket.on('GET_DRIVER_PICK_UP_NOTIFICATIONS', (foodOrder) => {
+    getFromQueueAndEmitNotifications('DRIVER_PICK_UP', socket, driverReadyForPickupQueue, foodOrder);
+  });
+
+  socket.on('DELIVERED_NOTIFICATION_CUST', (foodOrder) => {
+    addToQueueAndEmitToRoom('DELIVERED_NOTIFICATION_CUST', socket, deliveredNotificationCustomerQueue, foodOrder);
+  });
+
+  socket.on('ACKNOWLEDGE_DELIVERED_NOTIFICATION_CUST', (acknowledgment) => {
+    acknowledgeAndRemoveFromQueue(deliveredNotificationCustomerQueue, acknowledgment);
+  });
+
+  socket.on('GET_DELIVERED_NOTIFICATIONS_CUST', (foodOrder) => {
+    getFromQueueAndEmitNotifications('DELIVERED_NOTIFICATION_CUST', socket, deliveredNotificationCustomerQueue, foodOrder);
   });
   
 });
@@ -103,7 +120,7 @@ rds.on('connection', (socket) => {
 //*------ Helper Functions ------*/
 
 // Add to queue, if id does not exist add to queue
-function manageQueue(eventType, socket, queue, foodOrder) {
+function addToQueueAndEmitToRoom(eventType, socket, queue, foodOrder) {
   const { customerRoom, orderID } = foodOrder;
 
   // Attempt to get data from queue
@@ -125,7 +142,7 @@ function manageQueue(eventType, socket, queue, foodOrder) {
 }
 
 // Remove acknowledged notifications from queue
-function acknowledgeOrder(queue, acknowledgment) {
+function acknowledgeAndRemoveFromQueue(queue, acknowledgment) {
   const { customerRoom, orderID } = acknowledgment;
   let notifications = queue.getOrder(customerRoom);
 
@@ -136,7 +153,7 @@ function acknowledgeOrder(queue, acknowledgment) {
 }
 
 // Get notifications from queue, and send for emission
-function emitAllNotifications(eventType, socket, queue, foodOrder) {
+function getFromQueueAndEmitNotifications(eventType, socket, queue, foodOrder) {
   const { customerRoom } = foodOrder;
   console.log(`Emitting ${eventType} notifications for ${customerRoom}`);
 
