@@ -10,6 +10,7 @@ const simulateFoodPrep = (socket, foodOrder) => {
 const simulateNotifyDriverToPickUpOrder = (socket, foodOrder) => {
   console.log(`\nRESTAURANT: food order# ${foodOrder.orderID} is ready, driver has been notified to pick up order`);
   socket.emit('READY_FOR_PICKUP', foodOrder);
+  socket.emit('DRIVER_PICK_UP', foodOrder);
 };
 
 module.exports = {
