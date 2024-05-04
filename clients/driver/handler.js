@@ -10,7 +10,7 @@ const simulatePickupProcess = (socket, order) => {
 const simulateDeliveryProcess = (socket, order) => {
   console.log(`\nDRIVER: food order# ${order.orderID} has been delivered`);
   socket.emit('DELIVERED_NOTIFICATION_CUST', order);
-  socket.emit('DELIVERED_NOTIFICATION_DRIVER', order);
+  socket.emit('DELIVERED_NOTIFICATION_RESTAURANT', order);
 };
 
 module.exports = {
