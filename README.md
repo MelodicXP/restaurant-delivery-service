@@ -1,4 +1,4 @@
-# Lab - 401 Class 13 - Restaurant Delivery Service
+# Lab - 401 Class 14 - Restaurant Delivery Service
 
 ## Project: Restaurant Delivery Service
 
@@ -8,7 +8,7 @@ This will be an event driven application that “distributes” the responsibili
 
 ### Author: Melo
 
-### Problem Domain - Phase 3 - Message Queues
+### Problem Domain
 
 Objective:  
 
@@ -19,8 +19,8 @@ Objective:
 
 ### Links and Resources
 
-- [Pull Request](https://github.com/MelodicXP/caps/pull/8)
-- [GitHub Actions ci/cd](https://github.com/MelodicXP/caps/actions)
+- [Pull Request](https://github.com/MelodicXP/restaurant-delivery-service/pulls)
+- [GitHub Actions ci/cd](https://github.com/MelodicXP/restaurant-delivery-service/actions)
 
 ### Collaborators
 
@@ -28,16 +28,17 @@ Objective:
 
 #### `.env` requirements (where applicable)
 
-NAMESPACE_URL='yourURL/caps'
+NAMESPACE_URL='yourURL/rds'
+CUSTOMER_INFO={"name": "FirstName LastName", "address": "123 Nowhere St, FL"}
 
 #### How to initialize/run your application (where applicable)
 
 - e.g. node index.js on each file, start in this order:  
 
         1. server
-        2. customers
         2. restaurant
-        3. driver
+        2. driver
+        3. customer
 
 #### How to use your library (where applicable)
 
@@ -51,20 +52,22 @@ NAMESPACE_URL='yourURL/caps'
   - jest
 
 - Any tests of note?  
+  - customer-handler.test.js
+  - restaurant-handler.test.js
   - driver-handler.test.js
-  - flower-handler.test.js
-  - widget-handler.test.js
   - OrderCreator.test.js
-  - OrderQueue.test.js
+  - Queue.test.js
+  - FoodOrder.test.js
+  - Customer.test.js
 
 #### UML
 
-![Lab-14-UML](./assets/UMLDiagram.png)
+![Lab-14-UML](./assets/Diagram.png)
 
 #### File Structure
 
-![Lab-14-UML-File-Structure](./assets/fileStructDiagram.png)
+![Lab-14-UML-File-Structure](./assets/fileStruct.png)
 
 #### Terminal outputs
 
-![Terminal Outputs](./assets/terminalOutputs.png)
+![Terminal Outputs](./assets/terminalOutput.png)
