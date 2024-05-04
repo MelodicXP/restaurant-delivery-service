@@ -42,13 +42,24 @@ socketManager.listenForEvent('FOOD_ORDER_READY', (foodOrder) => {
   processFoodOrder(foodOrder);
 });
 
+socketManager.listenForEvent('DELIVERED_NOTIFICATION_RESTAURANT', (foodOrder) => {
+  console.log(`RESTAURANT: food order# ${foodOrder.orderID} for ${foodOrder.customerName} has been delivered by driver`);
+  
+  // Send acknowledgment back to the server
+  socketManager.emitEvent('ACKNOWLEDGE_DELIVERED_NOTIFICATION_RESTAURANT', {
+    customerRoom: foodOrder.customerRoom,
+    orderID: foodOrder.orderID,
+  });
+});
+
 //*------ Helper Functions ------*/
 
-// Join room and request orders from queue if any
+// Join room and request notifications from queue if any
 function joinRoomAndRequestOrders(room) {
   socketManager.joinRoom(room);
   console.log(`Joined room ${room}`);
   socketManager.emitEvent('GET_FOOD_ORDERS', {customerRoom: room});
+  socketManager.emitEvent('GET_DELIVERED_NOTIFICATIONS_RESTAURANT', {customerRoom: room });
 }
 
 //Process food order (prep food and notify driver ready for pickup)
