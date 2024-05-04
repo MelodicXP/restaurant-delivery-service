@@ -19,7 +19,8 @@ Objective:
 
 ### Links and Resources
 
-- [Pull Request](https://github.com/MelodicXP/restaurant-delivery-service/pulls)
+- [Pull Request](https://github.com/MelodicXP/restaurant-delivery-service/pull/1)
+- [All Pull Requests](https://github.com/MelodicXP/restaurant-delivery-service/pulls)
 - [GitHub Actions ci/cd](https://github.com/MelodicXP/restaurant-delivery-service/actions)
 
 ### Collaborators
