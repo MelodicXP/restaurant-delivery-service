@@ -44,6 +44,21 @@ socketManager.listenForEvent('READY_FOR_PICKUP', (foodOrder) => {
   });
 });
 
+
+// Request the server send back all 'ready for pick up' notifications
+socketManager.emitEvent('GET_DELIVERED_NOTIFICATIONS_CUST', {customerRoom: customer.customerRoom });
+
+socketManager.listenForEvent('DELIVERED_NOTIFICATION_CUST', (foodOrder) => {
+  console.log(`Status Update: ${foodOrder.customerName} your food order# ${foodOrder.orderID} has been delivered`);
+  console.table(foodOrder.items);
+
+  // Send acknowledgment back to the server
+  socketManager.emitEvent('ACKNOWLEDGE_DELIVERED_NOTIFICATION_CUST', {
+    customerRoom: customer.customerRoom,
+    orderID: foodOrder.orderID,
+  });
+});
+
 // Schedule food orders to be sent regularly (every 11s)
 setInterval(() => {
   const foodOrder = orderCreator.createFoodOrderForCustomer(customer);
@@ -53,4 +68,4 @@ setInterval(() => {
 
   let socket = socketManager.socket;
   orderHandler.sendFoodOrderToRestaurant(socket, foodOrder);
-}, 11000);
+}, 15000);
